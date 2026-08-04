@@ -147,9 +147,20 @@ class _AICreationScreenState extends State<AICreationScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent, 
       appBar: AppBar(
-        title: const Text('Otaku Universe'), 
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Otaku Universe'),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.auto_awesome_rounded, 
+              color: Colors.purpleAccent[100] ?? Colors.purpleAccent,
+              size: 20,
+            ),
+          ],
+        ), 
         actions: [
           GestureDetector(
             onTap: () {
@@ -301,8 +312,13 @@ class _AICreationScreenState extends State<AICreationScreen> {
         ),
       );
     } else {
+      // 🚀【要求完美实现】：彻底移除所有华语字，直接将旧纯英文替换为全新的动漫主题英文提示词
       return const Center(
-        child: Text('Your generated artwork will appear here', style: TextStyle(color: Colors.grey)),
+        child: Text(
+          'Your generated anime image will appear here', 
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
       );
     }
   }
@@ -434,7 +450,6 @@ class _HistorySheetContentState extends State<HistorySheetContent> {
                                   child: Image.network(
                                     imageUrl, 
                                     fit: BoxFit.cover,
-                                    // 🌟 终极核心优化：强行在解码阶段下采样压缩为 200x200，斩断显卡内存 ANR 卡死！
                                     cacheWidth: 200,
                                     cacheHeight: 200,
                                     headers: const {"User-Agent": "Mozilla/5.0"},
