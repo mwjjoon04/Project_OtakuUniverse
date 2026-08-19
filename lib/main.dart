@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/vault_provider.dart'; 
 import 'screens/ai_creation_screen.dart';
 import 'screens/ai_chat_screen.dart'; 
-import 'screens/tutor_screen.dart'; // 🌟 新增：导入你的学习页面文件！
+import 'screens/tutor_screen.dart'; 
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -17,7 +17,6 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // Activate the SSL bypass
   HttpOverrides.global = MyHttpOverrides(); 
 
   runApp(
@@ -36,25 +35,23 @@ class OtakuUniverseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 监听主题变化
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
       title: 'Otaku Universe',
       debugShowCheckedModeBanner: false,
-      // 定义白天模式
       theme: ThemeData(
         brightness: Brightness.light,
         primarySwatch: Colors.deepPurple,
         scaffoldBackgroundColor: Colors.grey[100],
       ),
-      // 定义夜间模式
+
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.deepPurple,
-        scaffoldBackgroundColor: const Color(0xFF121212), // 护眼深色
+        scaffoldBackgroundColor: const Color(0xFF121212),
       ),
-      // 核心开关：根据 Provider 决定用白天还是黑夜
+    
       themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
       
       home: const LoginScreen(), 
@@ -72,12 +69,11 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  // 🌟 修改点 1：把 TutorScreen（学习页面）加进屏幕列表里
   final List<Widget> _screens = [
     const AICreationScreen(),
     const AIChatScreen(),
-    const TutorScreen(),    // 🌟 这是你的学习页面
-    const DiscoverScreen(), // 这是你的小游戏页面
+    const TutorScreen(),    
+    const DiscoverScreen(), 
   ];
 
   @override
@@ -91,22 +87,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             _currentIndex = index;
           });
         },
-        type: BottomNavigationBarType.fixed, // 确保有 4 个按钮时不会出现奇怪的缩放动画
+        type: BottomNavigationBarType.fixed, 
         selectedItemColor: Colors.purpleAccent,
         unselectedItemColor: Colors.grey,
-        // 🌟 修改点 2：底部导航栏加回第 4 个按钮 "Learn"
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Image'), 
           BottomNavigationBarItem(icon: Icon(Icons.art_track), label: 'Chat'),   
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Learn'), // 🌟 学习按钮 (使用了博士帽图标)
-          BottomNavigationBarItem(icon: Icon(Icons.videogame_asset), label: 'Game'), // 顺便帮你把游戏图标换成了手柄，更直观！
+          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Learn'), 
+          BottomNavigationBarItem(icon: Icon(Icons.videogame_asset), label: 'Game'), 
         ],
       ),
     );
   }
 }
 
-// This class bypasses the strict SSL certificate checks on Android Emulators
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {

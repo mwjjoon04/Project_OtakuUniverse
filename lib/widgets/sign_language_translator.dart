@@ -22,7 +22,6 @@ class _SignLanguageTranslatorState extends State<SignLanguageTranslator> {
   String _currentConcept = 'HELLO';
   bool _isInitialized = false;
 
-  // 🚀【全网净化资产字典】：已彻底删去 FUCK 核心物理路径映射
   final Map<String, String> _signVideoAssets = {
     'HELLO': 'assets/videos/hello.mp4',       
     'GOODBYE': 'assets/videos/goodbye.mp4',   
@@ -54,7 +53,6 @@ class _SignLanguageTranslatorState extends State<SignLanguageTranslator> {
     'ANGRY': 'assets/videos/angry.mp4',
     'CALL': 'assets/videos/call.mp4',
     'CRY': 'assets/videos/cry.mp4',
-    // 🛑【已安全斩断底层的 FUCK 映射线】
     'HAPPY': 'assets/videos/happy.mp4',
     'TRAVELING': 'assets/videos/i_love_travelling_around.mp4',
     'MONEY': 'assets/videos/money.mp4',
@@ -96,7 +94,6 @@ class _SignLanguageTranslatorState extends State<SignLanguageTranslator> {
     }
   }
 
-  // 🚀【长句拦截器优先解析网关】
   void _parseConcept() {
     final String upper = widget.text.toUpperCase();
     setState(() {
@@ -116,7 +113,6 @@ class _SignLanguageTranslatorState extends State<SignLanguageTranslator> {
       else if (upper.contains('ANGRY')) { _currentConcept = 'ANGRY'; }
       else if (upper.contains('CALL')) { _currentConcept = 'CALL'; }
       else if (upper.contains('CRY')) { _currentConcept = 'CRY'; }
-      // 🛑【已全面抹除 FUCK 解析分支，拒绝中途拦截】
       else if (upper.contains('HAPPY')) { _currentConcept = 'HAPPY'; }
       else if (upper.contains('TRAVELLING') || upper.contains('TRAVEL') || upper.contains('AROUND')) { _currentConcept = 'TRAVELING'; }
       else if (upper.contains('MONEY')) { _currentConcept = 'MONEY'; }
@@ -165,7 +161,7 @@ class _SignLanguageTranslatorState extends State<SignLanguageTranslator> {
         _handleVideoPlayback();
       }
     } catch (e) {
-      debugPrint("❌ 本地手语视频初始化挂载异常: $e");
+      debugPrint("Sign language video initialization error: $e");
     }
   }
 

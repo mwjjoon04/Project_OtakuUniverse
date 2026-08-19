@@ -6,7 +6,6 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../services/audio_service.dart';          
 import '../widgets/sign_language_translator.dart'; 
 
-// 轻量级导航外壳
 class TutorScreen extends StatelessWidget {
   const TutorScreen({super.key});
 
@@ -36,7 +35,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
   String _selectedCharacter = 'Tanjiro Kamado';
   String _selectedLanguage = 'English (EN)'; 
 
-  // 🌟 根据选择自动匹配 3D .glb 模型路径
   String get _currentModelPath {
     if (_selectedCharacter == 'Luffy') return 'assets/models/luffy.glb';
     if (_selectedCharacter == 'Nezuko') return 'assets/models/nezuko.glb';
@@ -74,7 +72,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     }
   }
 
-  // 🌟 优化后的音画完全同步播放逻辑
   void _startPlayback() async {
     String japaneseText = _jpWords.join('');
     
@@ -82,7 +79,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     if (_selectedCharacter == 'Nezuko') speechRate = 0.42; 
     if (_selectedCharacter == 'Luffy') speechRate = 0.55;   
 
-    // 计算真实的音频时长（日文每个假名约耗时 240ms）
     int msPerChar = (240 / (speechRate * 2)).round(); 
     int calculatedDuration = (japaneseText.length * msPerChar) + 400;
 
@@ -96,12 +92,10 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     if (_selectedCharacter == 'Nezuko') mappedCharacterName = "Nezuko Kamado";
     if (_selectedCharacter == 'Luffy') mappedCharacterName = "Monkey D. Luffy";
 
-    // 触发 TTS 发音
     if (_selectedCharacter != 'Nezuko') {
       _audioService.speak(japaneseText, mappedCharacterName, locale: "ja-JP");
     }
 
-    // 预留 350ms 缓冲等待手机系统音频引擎就绪，消除启动延迟
     await Future.delayed(const Duration(milliseconds: 350));
     if (!mounted) return;
 
@@ -254,7 +248,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     }
   }
 
-  // 泛型通用卡片列表渲染组件
   Widget _buildVerticalListRow(List<Map<String, dynamic>> phrases) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -317,7 +310,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     );
   }
 
-  // 安全占位符头像组件
   Widget _buildSafeDropdownAvatar(String imagePath) {
     return Container(
       width: 24,
@@ -358,7 +350,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     bool isChinese = _selectedLanguage == 'Chinese (ZH)';
     bool isMalay = _selectedLanguage == 'Malay (MS)';
 
-    // 主标题多语言联动映射
     String mainTitleText = '';
     if (_selectedCharacter == 'Nezuko') {
       if (isChinese) {
@@ -378,7 +369,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
       }
     }
 
-    // 折叠菜单大标题多语言联动
     String phrasesTitle = '';
     if (isChinese) {
       phrasesTitle = '💡 推荐基本用语';
@@ -409,7 +399,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     String customInputTitle = isChinese ? '✍️ 自定义输入翻译去日语' : (isMalay ? '✍️ Terjemah ke Bahasa Jepun' : '✍️ Translate anything to Japanese');
     String hintText = isChinese ? '输入任何文字，开始翻译学习...' : (isMalay ? 'Taip untuk mula belajar...' : 'Type anything to start learning...');
 
-    // 数据源字典
     final List<Map<String, dynamic>> nezukoPhrases = [
       {
         "type": "word", 
@@ -538,7 +527,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
         "trans": {'English (EN)': "Stop", 'Chinese (ZH)': "停", 'Malay (MS)': "Berhenti"}
       },
 
-      // —— Sentences ——
       {
         "type": "sentence", 
         "label": {'English (EN)': "❓ how are you", 'Chinese (ZH)': "❓ 你好吗？", 'Malay (MS)': "❓ apa khabar?"},
@@ -849,7 +837,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                             ),
                           ),
                         ],
-                        // 🌟 角色选择与台词、模型联动逻辑
                         onChanged: (value) {
                           if (value != null) {
                             _stopPlayback(); 
@@ -924,7 +911,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
             ),
             const SizedBox(height: 24),
 
-            // ---------------- 核心展示卡片 (嵌入 3D 模型) ----------------
             Container(
               width: double.infinity, 
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -947,7 +933,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center, 
                 children: [
-                  // 🌟【3D 角色渲染区】：角色非 Nezuko 时显示 3D 模型
                   if (_selectedCharacter != 'Nezuko') ...[
                     SizedBox(
                       height: 200, 

@@ -297,9 +297,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 }
 
-// ==========================================
-// 🌊 GAME 1: WATER BREATHING: SLASH (自适应高屏)
-// ==========================================
 class WaterBreathingSlashGame extends StatefulWidget {
   final int highScore;
   final Function(int) onScoreUpdate;
@@ -414,7 +411,7 @@ class _WaterBreathingSlashGameState extends State<WaterBreathingSlashGame> {
       romaji: isBomb ? "DEMON" : kana["ro"]!,
       isBomb: isBomb,
       x: 40.0 + rand.nextDouble() * (_boardWidth - 80.0).clamp(100.0, 500.0),
-      y: _boardHeight - 20, // 从屏幕底部升起
+      y: _boardHeight - 20, 
       speedY: -(11.0 + rand.nextDouble() * 4.5),
       speedX: (rand.nextDouble() - 0.5) * 3.5,
     );
@@ -775,9 +772,6 @@ class WaterSlashPainter extends CustomPainter {
   bool shouldRepaint(covariant WaterSlashPainter oldDelegate) => true;
 }
 
-// ==========================================
-// 🍖 GAME 2: LUFFY: MEAT CATCHER (🌟 修复草帽靠底自适应)
-// ==========================================
 class LuffyMeatCatcherGame extends StatefulWidget {
   final int highScore;
   final Function(int) onScoreUpdate;
@@ -895,11 +889,9 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
         f.y += f.speed;
       }
 
-      // 🌟 根据当前屏幕高度自适应判定区间
       double catcherTop = _boardHeight - 88.0;
 
       _foods.removeWhere((f) {
-        // 接住判定
         if (f.y >= catcherTop - 25.0 && f.y <= catcherTop + 35.0) {
           if ((f.x - _luffyX).abs() < 45.0) {
             HapticFeedback.lightImpact();
@@ -916,8 +908,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
             return true;
           }
         }
-
-        // 漏接食物扣血判定
         if (f.y > _boardHeight) {
           if (!f.isBomb) {
             _lives--;
@@ -967,7 +957,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
 
             return Stack(
               children: [
-                // 1. 拖动层与下落食物渲染
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onHorizontalDragUpdate: (details) {
@@ -989,8 +978,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
                           ),
                         );
                       }),
-
-                      // 🌟 核心修改：草帽紧贴底部（自适应任意长屏手机，距底部 14px）
                       Positioned(
                         left: _luffyX - 35,
                         bottom: 14,
@@ -1013,7 +1000,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
                   ),
                 ),
 
-                // 2. HUD 顶栏
                 Positioned(
                   top: 12,
                   left: 16,
@@ -1070,8 +1056,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
                     ],
                   ),
                 ),
-
-                // 3. 暂停弹窗
                 if (_isPaused && !_isGameOver)
                   Container(
                     color: Colors.black.withOpacity(0.85),
@@ -1117,7 +1101,6 @@ class _LuffyMeatCatcherGameState extends State<LuffyMeatCatcherGame> {
                     ),
                   ),
 
-                // 4. 结算弹层
                 if (_isGameOver)
                   Container(
                     color: Colors.black87,

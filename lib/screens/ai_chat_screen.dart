@@ -134,7 +134,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
     }
   }
 
-  // 🌟 核心升级：细化大模型的声线生成引导，强行格式化为完美适合 TTS 朗读的剧本台词格式
   Future<String> _getAIResponse(String message) async {
     try {
       final model = FirebaseAI.googleAI().generativeModel(model: 'gemini-3-flash-preview');
@@ -210,7 +209,6 @@ class _AIChatScreenState extends State<AIChatScreen> {
       });
 
       if (mounted) {
-        // 🌟 核心双重滤网拦截器：利用正则表达式，强行把文本里死灰复燃的 *动作描述* 过滤抹杀掉，保护语音播报！
         String cleanSpeechText = aiResponse.replaceAll(RegExp(r'\*.*?\*'), '').replaceAll(RegExp(r'\[.*?\]'), '').trim();
         if (cleanSpeechText.isEmpty) cleanSpeechText = aiResponse; // 兜底安全
         

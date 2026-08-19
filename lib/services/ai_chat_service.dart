@@ -3,9 +3,6 @@ import 'package:firebase_ai/firebase_ai.dart';
 
 class AIChatService {
   
-  // --------------------------------------------------------
-  // 正常聊天功能保持不变
-  // --------------------------------------------------------
   Future<String> getCharacterResponse(String message, String characterName) async {
     try {
       final model = FirebaseAI.googleAI().generativeModel(
@@ -30,9 +27,6 @@ class AIChatService {
     }
   }
 
-  // --------------------------------------------------------
-  // 终极修复版：强制逐字翻译，绝不加戏
-  // --------------------------------------------------------
   Future<String> getTutorResponse(
       String topic, 
       String characterName, 

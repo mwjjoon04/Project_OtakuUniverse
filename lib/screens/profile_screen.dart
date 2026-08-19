@@ -35,7 +35,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Expanded(
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4, // 一行显示4个
+                crossAxisCount: 4, 
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
@@ -44,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _avatarUrl = _builtInAvatars[index]; // 将选中的路径存入原本的 avatarUrl 变量
+                      _avatarUrl = _builtInAvatars[index]; 
                     });
                     Navigator.pop(context);
                   },
@@ -73,7 +73,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  // 从数据库读取现有的用户资料
   Future<void> _loadUserData() async {
     if (user == null) return;
     try {
@@ -94,8 +93,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
-  // 选择出生日期
   Future<void> _selectDOB() async {
     DateTime? picked = await showDatePicker(
       context: context,
@@ -123,8 +120,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 保存资料到 Firebase (包括上传图片到 Storage)
-  // 修改后的保存逻辑（简化版）
 Future<void> _saveProfile() async {
   if (user == null) return;
   setState(() { _isLoading = true; });
@@ -134,7 +129,7 @@ Future<void> _saveProfile() async {
       'username': _usernameController.text.trim(),
       'dob': _dobController.text.trim(),
       'favoriteCharacter': _selectedCharacter,
-      'avatarUrl': _avatarUrl, // 存入的是 'assets/images/avatar1.png' 这种路径
+      'avatarUrl': _avatarUrl, 
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -146,14 +141,13 @@ Future<void> _saveProfile() async {
   }
 }
 
-  // 退出登录
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false, // 清除所有页面栈，防止按返回键又回到主页
+        (route) => false, 
       );
     }
   }
@@ -161,7 +155,7 @@ Future<void> _saveProfile() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // 目前先写死黑色，第二阶段做主题切换时再改
+      backgroundColor: Colors.black, 
       appBar: AppBar(
         title: const Text('My Profile'),
         backgroundColor: Colors.deepPurple[900],
@@ -185,7 +179,6 @@ Future<void> _saveProfile() async {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // 头像区域
                 GestureDetector(
                   onTap: _showAvatarPicker,
                   child: Stack(
@@ -194,7 +187,6 @@ Future<void> _saveProfile() async {
                       CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.grey[800],
-                          // 核心修改：只判断 _avatarUrl 是否为空
                           backgroundImage: _avatarUrl != null 
                               ? AssetImage(_avatarUrl!) as ImageProvider 
                               : null,
@@ -211,8 +203,6 @@ Future<void> _saveProfile() async {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // 用户名输入框
                 TextField(
                   controller: _usernameController,
                   style: const TextStyle(color: Colors.white),
@@ -226,8 +216,6 @@ Future<void> _saveProfile() async {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // 出生日期选择框 (只读，点击触发日历)
                 TextField(
                   controller: _dobController,
                   readOnly: true,
@@ -243,8 +231,6 @@ Future<void> _saveProfile() async {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // 最喜欢的角色下拉框
                 DropdownButtonFormField<String>(
                   value: _selectedCharacter,
                   dropdownColor: Colors.grey[900],
@@ -265,8 +251,6 @@ Future<void> _saveProfile() async {
                   },
                 ),
                 const SizedBox(height: 30),
-
-                // 保存按钮
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -280,8 +264,6 @@ Future<void> _saveProfile() async {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // 退出登录按钮 (移到了这里)
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.redAccent),

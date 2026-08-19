@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:otaku_universe/main.dart';
-// 注意：如果你的主页类名不叫这个或者在其他文件，请修改下面的导入
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,7 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   
   bool _isLoading = false;
-  bool _isLoginMode = true; // 控制当前是“登录”还是“注册”模式
+  bool _isLoginMode = true; 
 
   void _submitAuth() async {
     final email = _emailController.text.trim();
@@ -35,16 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       if (_isLoginMode) {
-        // 执行登录逻辑
         await _auth.signInWithEmailAndPassword(email: email, password: password);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Login Successful!')));
       } else {
-        // 执行注册逻辑
         await _auth.createUserWithEmailAndPassword(email: email, password: password);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registration Successful!')));
       }
-
-      // 成功后跳转到你的主页！
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -52,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      // 捕捉 Firebase 报错（比如密码太短、账号不存在等）
       String message = 'An error occurred. Please check your credentials.';
       if (e.code == 'user-not-found') {
         message = 'No user found for that email.';
@@ -96,22 +90,19 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 用这段代码完美替换掉原本火箭的 Container
           Container(
-            width: 140,  // 🌟 控制整个圆形头像的宽度
-            height: 140, // 🌟 控制整个圆形头像的高度
+            width: 140,  
+            height: 140, 
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.deepPurpleAccent, width: 3), // 外圈的紫色边框，更好看
-              // 🌟 核心魔法：使用 DecorationImage 和 BoxFit.cover
-              // 这样无论你的图片有多横、多长，它都会自动居中并裁剪成完美的圆！
+              border: Border.all(color: Colors.deepPurpleAccent, width: 3), 
               image: const DecorationImage(
-                image: AssetImage('assets/anime_rocket.jpg'), // 确保这里的名字和你的横图名字一模一样
+                image: AssetImage('assets/anime_rocket.jpg'), 
                 fit: BoxFit.cover, 
               ),
             ),
           ),
-          const SizedBox(height: 30), // 保留原本跟下面文字的间距
+          const SizedBox(height: 30), 
                 const SizedBox(height: 30),
                 
                 Text(
@@ -174,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      _isLoginMode = !_isLoginMode; // 切换模式
+                      _isLoginMode = !_isLoginMode; 
                     });
                   },
                   child: Text(

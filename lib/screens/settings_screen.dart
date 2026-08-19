@@ -14,7 +14,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
 
-  // --- 修改密码功能 ---
   Future<void> _changePassword() async {
     TextEditingController passwordController = TextEditingController();
     bool confirm = await showDialog(
@@ -46,7 +45,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- 修改邮箱功能 ---
   Future<void> _changeEmail() async {
     TextEditingController emailController = TextEditingController();
     bool confirm = await showDialog(
@@ -70,7 +68,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirm && emailController.text.isNotEmpty) {
       try {
-        // Firebase 新规：修改邮箱前必须先向新邮箱发送验证邮件
         await user?.verifyBeforeUpdateEmail(emailController.text);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -84,7 +81,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // --- Feedback 反馈功能 ---
   void _showFeedback() {
     TextEditingController feedbackController = TextEditingController();
     showDialog(
@@ -98,17 +94,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('CANCEL')),
-          // --- 核心修改区：修复 Context 销毁报错 ---
           TextButton(
             onPressed: () async {
               String feedbackText = feedbackController.text.trim();
               if (feedbackText.isEmpty) return; 
 
-              // 1. 【重点】在关掉弹窗之前，提前捕获当前屏幕的“信使”和“导航”
               final messenger = ScaffoldMessenger.of(context);
               final navigator = Navigator.of(context);
 
-              // 2. 现在可以安全地关掉弹窗了
               navigator.pop();
 
               try {
@@ -119,7 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'timestamp': FieldValue.serverTimestamp(),
                   });
                   
-                  // 3. 用刚才保存下来的 messenger 发消息，不要再用 ScaffoldMessenger.of(context) 了
                   messenger.showSnackBar(
                     const SnackBar(content: Text('Thank you! Your feedback has been sent to the developer.'))
                   );
@@ -136,7 +128,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // --- About 关于信息 ---
   void _showAbout() {
     showDialog(
       context: context,
@@ -172,7 +163,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // 黑白夜模式切换开关
           SwitchListTile(
             title: const Text('Dark Mode', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             subtitle: Text(themeProvider.isDarkMode ? 'Currently in Dark Mode' : 'Currently in Light Mode'),
@@ -185,7 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const Divider(),
 
-          // 账户安全区
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Text('Account Security', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
@@ -204,7 +193,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const Divider(),
           
-          // 支持与关于区
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8.0),
             child: Text('Support & Info', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
