@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http; 
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart'; 
 import '../providers/vault_provider.dart';
@@ -19,6 +21,11 @@ class _AICreationScreenState extends State<AICreationScreen> {
   final ImagePicker _picker = ImagePicker(); 
 
   String? _userAvatar; 
+  bool _isLoading = false; 
+  String? _generatedImageUrl; 
+  Uint8List? _generatedImageBytes; 
+  String? _errorMessage; 
+  File? _uploadedImage; 
 
   @override
   void initState() {
@@ -37,12 +44,7 @@ class _AICreationScreenState extends State<AICreationScreen> {
       }
     }
   }
-  
-  bool _isLoading = false; 
-  String? _generatedImageUrl; 
-  String? _errorMessage; 
-  File? _uploadedImage; 
-  
+
   @override
   void dispose() {
     _promptController.dispose();
@@ -71,7 +73,8 @@ class _AICreationScreenState extends State<AICreationScreen> {
   }
 
   Future<void> _generateImage() async {
-    if (_promptController.text.trim().isEmpty) {
+    final text = _promptController.text.trim();
+    if (text.isEmpty) {
       setState(() {
         _errorMessage = "Please enter a prompt first.";
       });
@@ -82,42 +85,83 @@ class _AICreationScreenState extends State<AICreationScreen> {
       _isLoading = true;
       _errorMessage = null;
       _generatedImageUrl = null;
+      _generatedImageBytes = null;
     });
 
+    FocusScope.of(context).unfocus();
+
     try {
-      String cleanPrompt = _promptController.text.replaceAll('\n', ' ');
-      String finalPrompt = "$cleanPrompt, high quality anime style, masterpiece";
+      String cleanPrompt = text.replaceAll('\n', ' ');
+      String styleKeywords = "masterpiece, highly detailed anime illustration, cinematic dramatic lighting, rich deep contrast, glowing neon accents, sharp detailed eyes, vibrant colors, trending on artstation, aesthetic key visual";
+      String finalPrompt = "$cleanPrompt, $styleKeywords";
       String encodedPrompt = Uri.encodeComponent(finalPrompt);
-      int randomSeed = DateTime.now().millisecondsSinceEpoch;
+      int randomSeed = DateTime.now().millisecondsSinceEpoch % 1000000;
       
-      String realApiUrl = 'https://image.pollinations.ai/prompt/$encodedPrompt?seed=$randomSeed&width=512&height=512'; 
+      String primaryUrl = 'https://image.pollinations.ai/prompt/$encodedPrompt?seed=$randomSeed&width=512&height=512&nologo=true&model=turbo'; 
 
-      setState(() {
-        _generatedImageUrl = realApiUrl;
-        _isLoading = false;
-      });
-
+      http.Response? response;
+      
       try {
-        final user = FirebaseAuth.instance.currentUser; 
-        if (user != null) {
-          await FirebaseFirestore.instance.collection('user_images').add({
-            'userId': user.uid, 
-            'imageUrl': realApiUrl, 
-            'prompt': _promptController.text, 
-            'timestamp': FieldValue.serverTimestamp(), 
-          });
-        }
+        response = await http.get(
+          Uri.parse(primaryUrl),
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept": "image/*",
+          },
+        ).timeout(const Duration(seconds: 40));
       } catch (e) {
-        debugPrint("Error saving to cloud: $e"); 
+        debugPrint(e.toString());
       }
-      
-      if (mounted) {
-        Provider.of<VaultProvider>(context, listen: false).addImageToVault(realApiUrl);
+
+      if (response == null || response.statusCode != 200) {
+        try {
+          String backupUrl = 'https://pollinations.ai/p/$encodedPrompt?seed=$randomSeed&width=512&height=512';
+          response = await http.get(
+            Uri.parse(backupUrl),
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+              "Accept": "image/*",
+            },
+          ).timeout(const Duration(seconds: 40));
+        } catch (e) {
+          debugPrint(e.toString());
+        }
+      }
+
+      if (response != null && response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        if (!mounted) return;
+
+        setState(() {
+          _generatedImageUrl = primaryUrl;
+          _generatedImageBytes = response!.bodyBytes;
+          _isLoading = false;
+        });
+
+        try {
+          final user = FirebaseAuth.instance.currentUser; 
+          if (user != null) {
+            await FirebaseFirestore.instance.collection('user_images').add({
+              'userId': user.uid, 
+              'imageUrl': primaryUrl, 
+              'prompt': text, 
+              'timestamp': FieldValue.serverTimestamp(), 
+            });
+          }
+        } catch (e) {
+          debugPrint(e.toString()); 
+        }
+        
+        if (mounted) {
+          Provider.of<VaultProvider>(context, listen: false).addImageToVault(primaryUrl);
+        }
+      } else {
+        throw Exception("Failed to load image");
       }
 
     } catch (error) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = "Failed to generate image. Please try again.";
+        _errorMessage = "Network timeout or connection blocked.\nPlease check your Internet connection.";
         _isLoading = false;
       });
     }
@@ -145,6 +189,7 @@ class _AICreationScreenState extends State<AICreationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.transparent, 
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -194,9 +239,9 @@ class _AICreationScreenState extends State<AICreationScreen> {
               Stack(
                 children: [
                   Container(
-                    height: 100,
-                    width: 100,
-                    margin: const EdgeInsets.only(bottom: 12),
+                    height: 90,
+                    width: 90,
+                    margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.deepPurple, width: 2),
@@ -232,22 +277,29 @@ class _AICreationScreenState extends State<AICreationScreen> {
                   tooltip: 'Upload reference image',
                 ),
               ),
-              maxLines: 3,
+              maxLines: 2,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _isLoading ? null : _generateImage, 
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: _isLoading 
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                        SizedBox(width: 10),
+                        Text('AI is painting...', style: TextStyle(fontSize: 15)),
+                      ],
+                    )
                   : const Text('Generate AI Image', style: TextStyle(fontSize: 16)),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -259,15 +311,15 @@ class _AICreationScreenState extends State<AICreationScreen> {
               ),
             ),
             
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               icon: const Icon(Icons.history, color: Colors.deepPurpleAccent),
               label: const Text(
                 'View History', 
-                style: TextStyle(color: Colors.deepPurpleAccent, fontSize: 16, fontWeight: FontWeight.bold)
+                style: TextStyle(color: Colors.deepPurpleAccent, fontSize: 15, fontWeight: FontWeight.bold)
               ),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 side: const BorderSide(color: Colors.deepPurpleAccent, width: 2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -283,36 +335,45 @@ class _AICreationScreenState extends State<AICreationScreen> {
 
   Widget _buildResultArea() {
     if (_isLoading) {
-      return const Center(child: Text('Generating AI magic...', style: TextStyle(color: Colors.deepPurpleAccent)));
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Colors.deepPurpleAccent),
+            SizedBox(height: 14),
+            Text(
+              'Generating AI magic...\nPlease wait ~5 seconds',
+              textAlign: TextAlign.center, 
+              style: TextStyle(color: Colors.deepPurpleAccent, fontSize: 13),
+            ),
+          ],
+        ),
+      );
     } else if (_errorMessage != null) {
-      return Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent)));
-    } else if (_generatedImageUrl != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 36),
+              const SizedBox(height: 8),
+              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent)),
+            ],
+          ),
+        ),
+      );
+    } else if (_generatedImageBytes != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.network(
-          _generatedImageUrl!, 
-          headers: const {"User-Agent": "Mozilla/5.0"},
+        child: Image.memory(
+          _generatedImageBytes!, 
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return const Center(child: CircularProgressIndicator());
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.broken_image, color: Colors.grey, size: 50),
-                  SizedBox(height: 8),
-                  Text('Network issue: Could not load image.', style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
-          },
+          width: double.infinity,
+          height: double.infinity,
         ),
       );
     } else {
-      // 🚀【要求完美实现】：彻底移除所有华语字，直接将旧纯英文替换为全新的动漫主题英文提示词
       return const Center(
         child: Text(
           'Your generated anime image will appear here', 
@@ -348,17 +409,148 @@ class _HistorySheetContentState extends State<HistorySheetContent> {
     try {
       await FirebaseFirestore.instance.collection('user_images').doc(docId).delete();
     } catch (e) {
-      debugPrint('Error deleting image: $e');
+      debugPrint(e.toString());
     }
   }
 
   Future<void> _downloadImage(BuildContext context, String url) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Downloading image to gallery... (Requires image_gallery_saver package)'),
-        backgroundColor: Colors.deepPurpleAccent,
-        duration: Duration(seconds: 2),
+        content: Row(
+          children: [
+            SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+            SizedBox(width: 12),
+            Text('Downloading image...'),
+          ],
+        ),
+        duration: Duration(seconds: 1),
       ),
+    );
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {"User-Agent": "Mozilla/5.0"},
+      ).timeout(const Duration(seconds: 25));
+
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image downloaded successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        throw Exception("Failed to fetch image data.");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _openImagePreview(BuildContext context, String imageUrl, String prompt) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.92),
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  boundaryMargin: const EdgeInsets.all(20),
+                  minScale: 0.8,
+                  maxScale: 4.5,
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    headers: const {"User-Agent": "Mozilla/5.0"},
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.purpleAccent),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Icon(Icons.broken_image, color: Colors.grey, size: 60),
+                    ),
+                  ),
+                ),
+              ),
+
+              Positioned(
+                top: 40,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          prompt,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Positioned(
+                bottom: 30,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _downloadImage(context, imageUrl),
+                    icon: const Icon(Icons.download_rounded, color: Colors.white),
+                    label: const Text('Download Image', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurpleAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      elevation: 8,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -370,15 +562,15 @@ class _HistorySheetContentState extends State<HistorySheetContent> {
         Navigator.of(context).pop(); 
       },
       child: DraggableScrollableSheet(
-        initialChildSize: 0.6, 
+        initialChildSize: 0.65, 
         minChildSize: 0.4,     
-        maxChildSize: 0.9,     
+        maxChildSize: 0.95,     
         builder: (BuildContext context, ScrollController scrollController) {
           return GestureDetector(
             onTap: () {}, 
             child: Container(
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFF1B1A24),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
@@ -388,11 +580,14 @@ class _HistorySheetContentState extends State<HistorySheetContent> {
                     height: 5,
                     margin: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Colors.grey[700],
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  const Text('My Generation History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+                  const Text(
+                    'My Generation History', 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                  ),
                   const SizedBox(height: 10),
                   
                   Expanded(
@@ -442,66 +637,75 @@ class _HistorySheetContentState extends State<HistorySheetContent> {
                             String imageUrl = data['imageUrl'] ?? '';
                             String prompt = data['prompt'] ?? 'No prompt';
 
-                            return Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    imageUrl, 
-                                    fit: BoxFit.cover,
-                                    cacheWidth: 200,
-                                    cacheHeight: 200,
-                                    headers: const {"User-Agent": "Mozilla/5.0"},
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return const Center(child: CircularProgressIndicator());
-                                    },
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  right: 0,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.6),
-                                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.download, color: Colors.white, size: 20),
-                                          onPressed: () => _downloadImage(context, imageUrl),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
-                                          onPressed: () => _deleteImage(docId),
-                                        ),
-                                      ],
+                            return GestureDetector(
+                              onTap: () => _openImagePreview(context, imageUrl, prompt),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      imageUrl, 
+                                      fit: BoxFit.cover,
+                                      cacheWidth: 300,
+                                      cacheHeight: 300,
+                                      headers: const {"User-Agent": "Mozilla/5.0"},
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(child: CircularProgressIndicator());
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          color: Colors.grey.shade900,
+                                          child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                                        );
+                                      },
                                     ),
                                   ),
-                                ),
-                                Positioned(
-                                  top: 4,
-                                  left: 4,
-                                  right: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black45,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      prompt, 
-                                      maxLines: 1, 
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.65),
+                                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.download, color: Colors.white, size: 20),
+                                            onPressed: () => _downloadImage(context, imageUrl),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                            onPressed: () => _deleteImage(docId),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                )
-                              ],
+                                  Positioned(
+                                    top: 4,
+                                    left: 4,
+                                    right: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        prompt, 
+                                        maxLines: 1, 
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
                             );
                           },
                         );

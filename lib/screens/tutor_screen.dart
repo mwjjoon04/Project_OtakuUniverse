@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; 
+import 'package:model_viewer_plus/model_viewer_plus.dart'; 
 import '../services/audio_service.dart';          
 import '../widgets/sign_language_translator.dart'; 
 
@@ -35,6 +36,13 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
   String _selectedCharacter = 'Tanjiro Kamado';
   String _selectedLanguage = 'English (EN)'; 
 
+  // 🌟 根据选择自动匹配 3D .glb 模型路径
+  String get _currentModelPath {
+    if (_selectedCharacter == 'Luffy') return 'assets/models/luffy.glb';
+    if (_selectedCharacter == 'Nezuko') return 'assets/models/nezuko.glb';
+    return 'assets/models/tanjiro.glb';
+  }
+
   List<String> _jpWords = ["全集中！", "今日", "の稽古", "を始め", "ましょう！"];
   List<String> _romajiWords = ["Zen ", "shuu ", "chuu! ", "Kyou ", "no ", "keiko ", "o ", "hajimemashou!"];
   
@@ -66,19 +74,36 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
     }
   }
 
-  void _startPlayback() {
+  // 🌟 优化后的音画完全同步播放逻辑
+  void _startPlayback() async {
     String japaneseText = _jpWords.join('');
     
-    double speechRate = 0.5; 
-    if (_selectedCharacter == 'Nezuko') speechRate = 0.4; 
-    if (_selectedCharacter == 'Luffy') speechRate = 0.6;   
+    double speechRate = 0.48; 
+    if (_selectedCharacter == 'Nezuko') speechRate = 0.42; 
+    if (_selectedCharacter == 'Luffy') speechRate = 0.55;   
 
-    int msPerChar = (130 / speechRate).round(); 
-    int calculatedDuration = (japaneseText.length * msPerChar) + 600;
+    // 计算真实的音频时长（日文每个假名约耗时 240ms）
+    int msPerChar = (240 / (speechRate * 2)).round(); 
+    int calculatedDuration = (japaneseText.length * msPerChar) + 400;
 
     if (_selectedCharacter == 'Nezuko') {
       calculatedDuration = 6000; 
     }
+
+    _stopPlayback();
+
+    String mappedCharacterName = "Tanjiro Kamado";
+    if (_selectedCharacter == 'Nezuko') mappedCharacterName = "Nezuko Kamado";
+    if (_selectedCharacter == 'Luffy') mappedCharacterName = "Monkey D. Luffy";
+
+    // 触发 TTS 发音
+    if (_selectedCharacter != 'Nezuko') {
+      _audioService.speak(japaneseText, mappedCharacterName, locale: "ja-JP");
+    }
+
+    // 预留 350ms 缓冲等待手机系统音频引擎就绪，消除启动延迟
+    await Future.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
 
     setState(() {
       _isPlaying = true;
@@ -89,15 +114,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
       }
     });
 
-    String mappedCharacterName = "Tanjiro Kamado";
-    if (_selectedCharacter == 'Nezuko') mappedCharacterName = "Nezuko Kamado";
-    if (_selectedCharacter == 'Luffy') mappedCharacterName = "Monkey D. Luffy";
-
-    if (_selectedCharacter != 'Nezuko') {
-      _audioService.speak(japaneseText, mappedCharacterName, locale: "ja-JP");
-    }
-
-    _mockTimer?.cancel();
     _mockTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (!mounted) return;
       setState(() {
@@ -362,7 +378,7 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
       }
     }
 
-    // 🚀【大升级】：折叠菜单大标题也全额接入多语言动态联动路由矩阵
+    // 折叠菜单大标题多语言联动
     String phrasesTitle = '';
     if (isChinese) {
       phrasesTitle = '💡 推荐基本用语';
@@ -833,6 +849,7 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                             ),
                           ),
                         ],
+                        // 🌟 角色选择与台词、模型联动逻辑
                         onChanged: (value) {
                           if (value != null) {
                             _stopPlayback(); 
@@ -847,6 +864,14 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                                   'English (EN)': "Hello",
                                   'Chinese (ZH)': "你好",
                                   'Malay (MS)': "Halo"
+                                };
+                              } else if (value == 'Luffy') {
+                                _jpWords = ["海賊王に", "おれは", "なる！"];
+                                _romajiWords = ["Kaizoku ou ni ", "ore wa ", "naru! "];
+                                _currentTranslations = {
+                                  'English (EN)': "I'm gonna be King of the Pirates!",
+                                  'Chinese (ZH)': "我是要成为海贼王的男人！",
+                                  'Malay (MS)': "Aku akan menjadi Raja Lanun!"
                                 };
                               } else {
                                 _jpWords = ["全集中！", "今日", "の稽古", "を始め", "ましょう！"];
@@ -899,6 +924,7 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
             ),
             const SizedBox(height: 24),
 
+            // ---------------- 核心展示卡片 (嵌入 3D 模型) ----------------
             Container(
               width: double.infinity, 
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -921,6 +947,22 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center, 
                 children: [
+                  // 🌟【3D 角色渲染区】：角色非 Nezuko 时显示 3D 模型
+                  if (_selectedCharacter != 'Nezuko') ...[
+                    SizedBox(
+                      height: 200, 
+                      child: ModelViewer(
+                        key: ValueKey(_currentModelPath), 
+                        src: _currentModelPath,
+                        alt: '3D Character Model',
+                        autoRotate: false,                
+                        cameraControls: true,             
+                        backgroundColor: Colors.transparent, 
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   if (_selectedCharacter != 'Nezuko') ...[
                     RichText(
                       textAlign: TextAlign.center,
@@ -1021,7 +1063,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                         ),
                         margin: EdgeInsets.zero,
                         child: ExpansionTile(
-                          // 🚀【全语言随动】：wordsTitle 完美支持全场景联动响应
                           title: Text(
                             wordsTitle,
                             style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
@@ -1046,7 +1087,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                         ),
                         margin: EdgeInsets.zero,
                         child: ExpansionTile(
-                          // 🚀【全语言随动】：sentencesTitle 完美支持全场景联动响应
                           title: Text(
                             sentencesTitle,
                             style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
@@ -1075,7 +1115,6 @@ class _NihongoAudioTutorWidgetState extends State<NihongoAudioTutorWidget> {
                         ),
                         margin: EdgeInsets.zero,
                         child: ExpansionTile(
-                          // 🚀【全语言随动修复】：phrasesTitle 完美支持全场景联动响应，彻底消灭 Recommended Phrases 英文残留！
                           title: Text(
                             phrasesTitle,
                             style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),

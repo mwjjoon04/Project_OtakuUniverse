@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   video_player: ^2.8.2
+  model_viewer_plus: ^1.7.0
   # 用于跨多个屏幕的共享状态 [cite: 24]
   provider: ^6.1.2 
   # 用于集成外部数据源 (API) [cite: 32]
@@ -80,6 +81,7 @@ flutter:
   assets:
     - assets/
     - assets/videos/
+    - assets/models/
 
   fonts:
     - family: ASLFont
